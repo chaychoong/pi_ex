@@ -77,6 +77,61 @@ defmodule PiEx.Protocol.DecodeTest do
              Protocol.decode_line(json)
   end
 
+  test "decodes message_start event" do
+    json = ~s|{"type":"message_start"}|
+    assert {:event, %Event.MessageStart{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes message_end event" do
+    json = ~s|{"type":"message_end"}|
+    assert {:event, %Event.MessageEnd{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes turn_start event" do
+    json = ~s|{"type":"turn_start"}|
+    assert {:event, %Event.TurnStart{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes turn_end event" do
+    json = ~s|{"type":"turn_end"}|
+    assert {:event, %Event.TurnEnd{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes tool_execution_update event" do
+    json = ~s|{"type":"tool_execution_update","toolCallId":"tc-3","toolName":"bash","partialResult":"partial output"}|
+    assert {:event, %Event.ToolExecutionUpdate{} = event} = Protocol.decode_line(json)
+    assert event.tool_call_id == "tc-3"
+    assert event.tool_name == "bash"
+    assert event.partial_result == "partial output"
+  end
+
+  test "decodes auto_compaction_start event" do
+    json = ~s|{"type":"auto_compaction_start"}|
+    assert {:event, %Event.AutoCompactionStart{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes auto_compaction_end event" do
+    json = ~s|{"type":"auto_compaction_end"}|
+    assert {:event, %Event.AutoCompactionEnd{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes auto_retry_start event" do
+    json = ~s|{"type":"auto_retry_start"}|
+    assert {:event, %Event.AutoRetryStart{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes auto_retry_end event" do
+    json = ~s|{"type":"auto_retry_end"}|
+    assert {:event, %Event.AutoRetryEnd{}} = Protocol.decode_line(json)
+  end
+
+  test "decodes extension_error event" do
+    json = ~s|{"type":"extension_error","message":"something went wrong","code":"ERR_TIMEOUT"}|
+    assert {:event, %Event.ExtensionError{} = event} = Protocol.decode_line(json)
+    assert event.message == "something went wrong"
+    assert event.code == "ERR_TIMEOUT"
+  end
+
   test "returns error tuple for invalid JSON" do
     assert {:error, _reason} = Protocol.decode_line("not json")
   end
