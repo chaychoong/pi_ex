@@ -122,16 +122,14 @@ defmodule PiEx.Instance do
   # --- Callbacks ---
 
   @impl true
-  def handle_call({:prompt, message, opts}, _from, %State{is_streaming: true} = state) do
-    _ = opts
-    _ = message
+  def handle_call({:prompt, _message, _opts}, _from, %State{is_streaming: true} = state) do
     {:reply, {:error, :already_streaming}, state}
   end
 
   def handle_call({:prompt, message, opts}, _from, %State{} = state) do
     cmd = %PiEx.Command.Prompt{message: message, images: Keyword.get(opts, :images)}
     write_command(state, cmd)
-    {:reply, :ok, %{state | is_streaming: true}}
+    {:reply, :ok, state}
   end
 
   def handle_call({:steer, message, opts}, _from, %State{} = state) do
@@ -175,15 +173,14 @@ defmodule PiEx.Instance do
   def handle_cast({:respond_ui, request_id, response}, %State{} = state) do
     case Map.pop(state.pending_ui, request_id) do
       {nil, _} ->
-        :ok
+        {:noreply, state}
 
-      {timer, _} ->
+      {timer, pending_ui} ->
         Process.cancel_timer(timer)
+        cmd = %RespondUI{request_id: request_id, response: response}
+        write_command(state, cmd)
+        {:noreply, %{state | pending_ui: pending_ui}}
     end
-
-    cmd = %RespondUI{request_id: request_id, response: response}
-    write_command(state, cmd)
-    {:noreply, %{state | pending_ui: Map.delete(state.pending_ui, request_id)}}
   end
 
   @impl true
@@ -235,8 +232,7 @@ defmodule PiEx.Instance do
         {:noreply, state}
 
       {_timer, pending_ui} ->
-        cancel_response = Protocol.encode(%RespondUI{request_id: id, response: %{cancelled: true}})
-        state.writer.(state.port, cancel_response <> "\n")
+        write_command(state, %RespondUI{request_id: id, response: %{cancelled: true}})
         {:noreply, %{state | pending_ui: pending_ui}}
     end
   end
@@ -275,7 +271,12 @@ defmodule PiEx.Instance do
 
   defp write_command(%State{} = state, cmd) do
     json = Protocol.encode(cmd)
-    state.writer.(state.port, json <> "\n")
+
+    try do
+      state.writer.(state.port, json <> "\n")
+    rescue
+      ArgumentError -> :port_closed
+    end
   end
 
   defp send_correlated(%State{} = state, cmd, from) do
