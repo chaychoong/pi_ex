@@ -1,6 +1,8 @@
 defmodule PiEx.StructsCompletenessTest do
   use ExUnit.Case, async: true
 
+  alias PiEx.Command.RespondUI
+
   @all_commands [
     PiEx.Command.Prompt,
     PiEx.Command.Steer,
@@ -30,7 +32,7 @@ defmodule PiEx.StructsCompletenessTest do
     PiEx.Command.SetSessionName,
     PiEx.Command.ExportHtml,
     PiEx.Command.GetCommands,
-    PiEx.Command.RespondUI
+    RespondUI
   ]
 
   @all_events [
@@ -73,7 +75,7 @@ defmodule PiEx.StructsCompletenessTest do
   end
 
   test "all commands have an :id field" do
-    for mod <- @all_commands, mod != PiEx.Command.RespondUI do
+    for mod <- @all_commands, mod != RespondUI do
       struct = struct(mod)
 
       assert Map.has_key?(struct, :id),

@@ -2,6 +2,7 @@ defmodule PiEx.Instance do
   @moduledoc "GenServer that owns a Port to a pi --mode rpc process."
   use GenServer
 
+  alias PiEx.Command.RespondUI
   alias PiEx.Protocol
 
   require Logger
@@ -50,7 +51,12 @@ defmodule PiEx.Instance do
         :error ->
           pi_path = Keyword.get(opts, :pi_path, "pi")
           args = Keyword.get(opts, :args, ["--mode", "rpc"])
-          port = Port.open({:spawn_executable, pi_path}, [:binary, {:line, 1_048_576}, {:args, args}, :exit_status])
+
+          executable =
+            System.find_executable(pi_path) ||
+              raise ArgumentError, "could not find executable: #{inspect(pi_path)}"
+
+          port = Port.open({:spawn_executable, executable}, [:binary, {:line, 1_048_576}, {:args, args}, :exit_status])
           {port, &Port.command/2}
       end
 
@@ -175,7 +181,7 @@ defmodule PiEx.Instance do
         Process.cancel_timer(timer)
     end
 
-    cmd = %PiEx.Command.RespondUI{request_id: request_id, response: response}
+    cmd = %RespondUI{request_id: request_id, response: response}
     write_command(state, cmd)
     {:noreply, %{state | pending_ui: Map.delete(state.pending_ui, request_id)}}
   end
@@ -202,6 +208,7 @@ defmodule PiEx.Instance do
 
       {:error, _reason} ->
         require Logger
+
         Logger.warning("PiEx.Instance failed to decode line: #{inspect(full_line)}")
         {:noreply, state}
     end
@@ -228,7 +235,7 @@ defmodule PiEx.Instance do
         {:noreply, state}
 
       {_timer, pending_ui} ->
-        cancel_response = Protocol.encode(%PiEx.Command.RespondUI{request_id: id, response: %{cancelled: true}})
+        cancel_response = Protocol.encode(%RespondUI{request_id: id, response: %{cancelled: true}})
         state.writer.(state.port, cancel_response <> "\n")
         {:noreply, %{state | pending_ui: pending_ui}}
     end
@@ -236,6 +243,7 @@ defmodule PiEx.Instance do
 
   def handle_info(msg, state) do
     require Logger
+
     Logger.warning("PiEx.Instance received unexpected message: #{inspect(msg)}")
     {:noreply, state}
   end
@@ -278,6 +286,6 @@ defmodule PiEx.Instance do
   end
 
   defp generate_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+    8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
   end
 end

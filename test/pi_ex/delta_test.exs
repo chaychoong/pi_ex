@@ -41,7 +41,7 @@ defmodule PiEx.DeltaTest do
       |> Delta.apply_event(%MessageUpdate{type: :toolcall_delta, text: "\"ls\"}"})
       |> Delta.apply_event(%MessageUpdate{type: :toolcall_end})
 
-    assert [%{name: "bash", arguments: "{\"command\":\"ls\"}"}] = Delta.tool_calls(delta)
+    assert [%{name: "bash", arguments: ~s({"command":"ls"})}] = Delta.tool_calls(delta)
   end
 
   test "handles interleaved text and thinking" do

@@ -1,8 +1,9 @@
 defmodule PiEx.Protocol.DecodeTest do
   use ExUnit.Case, async: true
 
-  alias PiEx.{Event, Response}
+  alias PiEx.Event
   alias PiEx.Protocol
+  alias PiEx.Response
 
   test "decodes a successful command response" do
     json = ~s|{"type":"response","command":"get_state","success":true,"id":"req-1","data":{"isStreaming":false}}|

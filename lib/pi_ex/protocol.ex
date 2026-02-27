@@ -15,11 +15,9 @@ defmodule PiEx.Protocol do
   end
 
   def encode(%Command.Bash{} = cmd) do
-    # Special case: Pi's bash RPC spec names both the command type AND the
-    # shell command string as "command", which would produce invalid JSON with
-    # duplicate keys. We use "shellCommand" for the shell string. If Pi's
-    # actual wire format turns out to differ, update this mapping.
-    map = %{"command" => "bash", "shellCommand" => cmd.shell_command}
+    # Bash command uses "command" key for the shell string in Pi's wire format,
+    # but we also need "type" to identify this as a bash command.
+    map = %{"type" => "bash", "command" => cmd.shell_command}
     map = if cmd.id, do: Map.put(map, "id", cmd.id), else: map
     JSON.encode!(map)
   end
@@ -30,9 +28,8 @@ defmodule PiEx.Protocol do
     cmd
     |> Map.from_struct()
     |> Map.reject(fn {_k, v} -> is_nil(v) end)
-    |> Enum.map(fn {k, v} -> {to_camel(Atom.to_string(k)), convert_value(v)} end)
-    |> Map.new()
-    |> Map.put("command", command_name)
+    |> Map.new(fn {k, v} -> {to_camel(Atom.to_string(k)), convert_value(v)} end)
+    |> Map.put("type", command_name)
     |> JSON.encode!()
   end
 
@@ -144,9 +141,13 @@ defmodule PiEx.Protocol do
   defp decode_parsed(%{"type" => "message_update"} = data) do
     ame = data["assistantMessageEvent"] || %{}
 
+    # Pi uses "delta" for text content in text_delta/thinking_delta events,
+    # and "text" for toolcall_start. Fall back to "text" for compatibility.
+    text = ame["delta"] || ame["text"]
+
     event = %Event.MessageUpdate{
       type: to_message_type(ame["type"] || "start"),
-      text: ame["text"],
+      text: text,
       reason: ame["reason"]
     }
 

@@ -4,6 +4,9 @@ defmodule PiEx.InstanceTest do
   # Helper: start an Instance with a fake port ref and writer function injected.
   # The Instance skips Port.open when :port is provided.
   # The writer sends {:port_write, data} to the test process for assertions.
+  alias PiEx.Event.AgentStart
+  alias PiEx.Event.UIRequest
+
   defp start_instance(opts \\ []) do
     test_pid = self()
     fake_port = Keyword.get_lazy(opts, :port, &make_ref/0)
@@ -45,7 +48,7 @@ defmodule PiEx.InstanceTest do
       ctx = start_instance()
       send_line(ctx, ~s|{"type":"agent_start"}|)
 
-      assert_receive {:pi_event, _, %PiEx.Event.AgentStart{}}
+      assert_receive {:pi_event, _, %AgentStart{}}
       GenServer.stop(ctx.pid, :normal)
     end
 
@@ -59,7 +62,7 @@ defmodule PiEx.InstanceTest do
       ctx = start_instance(id: :my_agent, broadcast: broadcast)
       send_line(ctx, ~s|{"type":"agent_start"}|)
 
-      assert_receive {:broadcast, :my_agent, %PiEx.Event.AgentStart{}}
+      assert_receive {:broadcast, :my_agent, %AgentStart{}}
       GenServer.stop(ctx.pid, :normal)
     end
   end
@@ -93,7 +96,7 @@ defmodule PiEx.InstanceTest do
       assert :ok = PiEx.Instance.prompt(ctx.pid, "hello")
       assert_receive {:port_write, data}
       decoded = JSON.decode!(String.trim_trailing(data, "\n"))
-      assert decoded["command"] == "prompt"
+      assert decoded["type"] == "prompt"
       assert decoded["message"] == "hello"
       GenServer.stop(ctx.pid, :normal)
     end
@@ -112,7 +115,7 @@ defmodule PiEx.InstanceTest do
       refute_receive {:pi_event, _, _}, 50
 
       send(ctx.pid, {ctx.port, {:data, {:eol, chunk2}}})
-      assert_receive {:pi_event, _, %PiEx.Event.AgentStart{}}
+      assert_receive {:pi_event, _, %AgentStart{}}
 
       GenServer.stop(ctx.pid, :normal)
     end
@@ -151,7 +154,7 @@ defmodule PiEx.InstanceTest do
 
       send_line(ctx, json)
 
-      assert_receive {:pi_event, _, %PiEx.Event.UIRequest{id: "ui-1", method: :select}}
+      assert_receive {:pi_event, _, %UIRequest{id: "ui-1", method: :select}}
 
       state = :sys.get_state(ctx.pid)
       assert Map.has_key?(state.pending_ui, "ui-1")
@@ -166,7 +169,7 @@ defmodule PiEx.InstanceTest do
         ~s|{"type":"extension_ui_request","id":"ui-1","method":"select","title":"Pick","options":["a","b"]}|
 
       send_line(ctx, json)
-      assert_receive {:pi_event, _, %PiEx.Event.UIRequest{}}
+      assert_receive {:pi_event, _, %UIRequest{}}
 
       PiEx.Instance.respond_ui(ctx.pid, "ui-1", %{value: "a"})
 
@@ -185,7 +188,7 @@ defmodule PiEx.InstanceTest do
         ~s|{"type":"extension_ui_request","id":"ui-1","method":"select","title":"Pick","options":["a"]}|
 
       send_line(ctx, json)
-      assert_receive {:pi_event, _, %PiEx.Event.UIRequest{}}
+      assert_receive {:pi_event, _, %UIRequest{}}
 
       # Wait for the auto-cancel response to be written to port
       assert_receive {:port_write, _}, 500
@@ -209,7 +212,7 @@ defmodule PiEx.InstanceTest do
 
       # Simulate Pi starting to stream
       send_line(ctx, ~s|{"type":"agent_start"}|)
-      assert_receive {:pi_event, _, %PiEx.Event.AgentStart{}}
+      assert_receive {:pi_event, _, %AgentStart{}}
 
       # Second prompt should be rejected
       assert {:error, :already_streaming} = PiEx.Instance.prompt(ctx.pid, "second")

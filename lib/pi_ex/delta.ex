@@ -45,8 +45,7 @@ defmodule PiEx.Delta do
     %{delta | current_tool: %{tool | arguments: tool.arguments <> (text || "")}}
   end
 
-  def apply_event(%__MODULE__{current_tool: tool} = delta, %MessageUpdate{type: :toolcall_end})
-      when not is_nil(tool) do
+  def apply_event(%__MODULE__{current_tool: tool} = delta, %MessageUpdate{type: :toolcall_end}) when not is_nil(tool) do
     %{delta | tool_calls: [tool | delta.tool_calls], current_tool: nil}
   end
 

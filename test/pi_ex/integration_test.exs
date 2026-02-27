@@ -1,6 +1,8 @@
 defmodule PiEx.IntegrationTest do
   use ExUnit.Case
 
+  alias PiEx.Event.MessageUpdate
+
   @moduletag :integration
 
   @fake_pi Path.expand("../support/fake_pi.sh", __DIR__)
@@ -12,7 +14,7 @@ defmodule PiEx.IntegrationTest do
 
     assert_receive {:pi_event, _, %PiEx.Event.AgentStart{}}, 5000
 
-    assert_receive {:pi_event, _, %PiEx.Event.MessageUpdate{type: :text_delta, text: "Hello from fake pi"}},
+    assert_receive {:pi_event, _, %MessageUpdate{type: :text_delta, text: "Hello from fake pi"}},
                    5000
 
     assert_receive {:pi_event, _, %PiEx.Event.AgentEnd{}}, 5000
@@ -42,7 +44,7 @@ defmodule PiEx.IntegrationTest do
 
   defp collect_delta(delta) do
     receive do
-      {:pi_event, _, %PiEx.Event.MessageUpdate{} = event} ->
+      {:pi_event, _, %MessageUpdate{} = event} ->
         delta = PiEx.Delta.apply_event(delta, event)
         if event.type == :done, do: delta, else: collect_delta(delta)
 

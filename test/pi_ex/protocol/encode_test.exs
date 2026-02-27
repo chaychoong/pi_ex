@@ -9,7 +9,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "prompt"
+    assert decoded["type"] == "prompt"
     assert decoded["message"] == "hello"
     assert decoded["id"] == "req-1"
     refute Map.has_key?(decoded, "images")
@@ -25,7 +25,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "prompt"
+    assert decoded["type"] == "prompt"
     assert length(decoded["images"]) == 1
     assert hd(decoded["images"])["mimeType"] == "image/png"
   end
@@ -35,7 +35,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "set_model"
+    assert decoded["type"] == "set_model"
     assert decoded["provider"] == "anthropic"
     assert decoded["modelId"] == "claude-sonnet"
     refute Map.has_key?(decoded, "model_id")
@@ -46,7 +46,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "abort"
+    assert decoded["type"] == "abort"
     assert decoded["id"] == "req-4"
     assert map_size(decoded) == 2
   end
@@ -56,8 +56,8 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "bash"
-    assert decoded["shellCommand"] == "mix test"
+    assert decoded["type"] == "bash"
+    assert decoded["command"] == "mix test"
   end
 
   test "encodes Steer command" do
@@ -65,7 +65,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "steer"
+    assert decoded["type"] == "steer"
     assert decoded["message"] == "focus on tests"
   end
 
@@ -74,7 +74,7 @@ defmodule PiEx.Protocol.EncodeTest do
     json = Protocol.encode(cmd)
     decoded = JSON.decode!(json)
 
-    assert decoded["command"] == "follow_up"
+    assert decoded["type"] == "follow_up"
   end
 
   test "encodes RespondUI as extension_ui_response" do
