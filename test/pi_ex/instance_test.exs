@@ -67,7 +67,19 @@ defmodule PiEx.InstanceTest do
     end
   end
 
-  # --- Task 8: Command Sending and Correlation ---
+  describe "uncorrelated response" do
+    test "dispatches response as event when no pending call matches" do
+      ctx = start_instance()
+
+      response =
+        ~s|{"type":"response","command":"prompt","success":true,"id":"no-match","data":null}|
+
+      send_line(ctx, response)
+
+      assert_receive {:pi_event, _, %PiEx.Response{command: "prompt", success: true}}
+      GenServer.stop(ctx.pid, :normal)
+    end
+  end
 
   describe "correlated commands" do
     test "get_state sends command and returns response when response arrives" do
@@ -181,6 +193,20 @@ defmodule PiEx.InstanceTest do
       GenServer.stop(ctx.pid, :normal)
     end
 
+    test "respond_ui ignores unknown request_id" do
+      ctx = start_instance()
+
+      PiEx.Instance.respond_ui(ctx.pid, "unknown-id", %{value: "a"})
+
+      # Give the cast time to process
+      _ = :sys.get_state(ctx.pid)
+
+      # No write should have happened - unknown IDs are silently dropped
+      refute_receive {:port_write, _}
+
+      GenServer.stop(ctx.pid, :normal)
+    end
+
     test "auto-cancels UI request on timeout" do
       ctx = start_instance(ui_timeout: 100)
 
@@ -220,10 +246,33 @@ defmodule PiEx.InstanceTest do
       GenServer.stop(ctx.pid, :normal)
     end
 
-    test "steer writes to port regardless of streaming state" do
+    test "steer succeeds during streaming" do
       ctx = start_instance()
 
+      # Enter streaming state
+      assert :ok = PiEx.Instance.prompt(ctx.pid, "first")
+      assert_receive {:port_write, _}
+      send_line(ctx, ~s|{"type":"agent_start"}|)
+      assert_receive {:pi_event, _, %AgentStart{}}
+
+      # Steer should work even while streaming
       assert :ok = PiEx.Instance.steer(ctx.pid, "focus on tests")
+      assert_receive {:port_write, _}
+
+      GenServer.stop(ctx.pid, :normal)
+    end
+
+    test "follow_up succeeds during streaming" do
+      ctx = start_instance()
+
+      # Enter streaming state
+      assert :ok = PiEx.Instance.prompt(ctx.pid, "first")
+      assert_receive {:port_write, _}
+      send_line(ctx, ~s|{"type":"agent_start"}|)
+      assert_receive {:pi_event, _, %AgentStart{}}
+
+      # follow_up should work even while streaming
+      assert :ok = PiEx.Instance.follow_up(ctx.pid, "also do this")
       assert_receive {:port_write, _}
 
       GenServer.stop(ctx.pid, :normal)
