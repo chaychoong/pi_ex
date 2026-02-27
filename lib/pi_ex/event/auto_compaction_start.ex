@@ -1,5 +1,5 @@
 defmodule PiEx.Event.AutoCompactionStart do
-  @moduledoc false
+  @moduledoc "Emitted when Pi begins automatic conversation compaction."
   defstruct []
   @type t :: %__MODULE__{}
 end

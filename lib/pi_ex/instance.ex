@@ -296,7 +296,9 @@ defmodule PiEx.Instance do
     try do
       state.writer.(state.port, json <> "\n")
     rescue
-      ArgumentError -> :port_closed
+      ArgumentError ->
+        Logger.debug("PiEx.Instance: port closed, write dropped")
+        :port_closed
     end
   end
 

@@ -1,5 +1,5 @@
 defmodule PiEx.Event.Exited do
-  @moduledoc false
+  @moduledoc "Emitted when the Pi OS process exits. The `:code` field is the exit status."
 
   defstruct [:code]
 

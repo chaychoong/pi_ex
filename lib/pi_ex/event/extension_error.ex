@@ -1,5 +1,5 @@
 defmodule PiEx.Event.ExtensionError do
-  @moduledoc false
+  @moduledoc "Emitted when a Pi extension encounters an error."
   defstruct [:message, :code]
 
   @type t :: %__MODULE__{

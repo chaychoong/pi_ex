@@ -1,5 +1,5 @@
 defmodule PiEx.Event.AutoRetryEnd do
-  @moduledoc false
+  @moduledoc "Emitted when an automatic retry finishes."
   defstruct []
   @type t :: %__MODULE__{}
 end

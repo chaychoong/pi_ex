@@ -1,5 +1,5 @@
 defmodule PiEx.Event.ToolExecutionUpdate do
-  @moduledoc false
+  @moduledoc "Emitted with partial results while a tool call is running."
 
   defstruct [:tool_call_id, :tool_name, :partial_result]
 
