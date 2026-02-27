@@ -8,9 +8,10 @@ defmodule PiEx.Protocol do
   @doc "Encode a command struct to a JSON string for Pi's stdin."
   @spec encode(struct()) :: String.t()
   def encode(%Command.RespondUI{} = cmd) do
-    # RespondUI has a special wire format — it's an extension_ui_response
-    %{"type" => "extension_ui_response", "id" => cmd.request_id}
-    |> Map.merge(cmd.response)
+    # RespondUI has a special wire format - it's an extension_ui_response.
+    # Protocol fields are merged last so user-provided response cannot overwrite them.
+    cmd.response
+    |> Map.merge(%{"type" => "extension_ui_response", "id" => cmd.request_id})
     |> JSON.encode!()
   end
 
