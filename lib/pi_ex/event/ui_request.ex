@@ -1,5 +1,10 @@
 defmodule PiEx.Event.UIRequest do
-  @moduledoc false
+  @moduledoc """
+  A UI prompt sent by Pi requesting user interaction.
+
+  The `method` field indicates the kind of prompt (`:select`, `:confirm`,
+  `:input`, etc.). Respond with `PiEx.respond_ui/3`.
+  """
 
   defstruct [:id, :method, :title, :options, :message, :placeholder, :prefill, :timeout]
 

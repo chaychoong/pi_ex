@@ -92,44 +92,54 @@ defmodule PiEx.Instance do
     {:ok, state}
   end
 
-  # --- Public API ---
+  # --- Public API (documented on PiEx facade) ---
 
+  @doc false
   def prompt(server, message, opts \\ []) do
     GenServer.call(server, {:prompt, message, opts})
   end
 
+  @doc false
   def steer(server, message, opts \\ []) do
     GenServer.call(server, {:steer, message, opts})
   end
 
+  @doc false
   def follow_up(server, message, opts \\ []) do
     GenServer.call(server, {:follow_up, message, opts})
   end
 
+  @doc false
   def abort(server) do
     GenServer.cast(server, :abort)
   end
 
+  @doc false
   def get_state(server) do
     GenServer.call(server, :get_state)
   end
 
+  @doc false
   def get_messages(server) do
     GenServer.call(server, :get_messages)
   end
 
+  @doc false
   def set_model(server, provider, model_id) do
     GenServer.call(server, {:set_model, provider, model_id})
   end
 
+  @doc false
   def get_session_stats(server) do
     GenServer.call(server, :get_session_stats)
   end
 
+  @doc false
   def bash(server, command) do
     GenServer.call(server, {:bash, command})
   end
 
+  @doc false
   def respond_ui(server, request_id, response) do
     GenServer.cast(server, {:respond_ui, request_id, response})
   end
