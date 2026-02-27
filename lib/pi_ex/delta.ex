@@ -1,6 +1,7 @@
 defmodule PiEx.Delta do
   @moduledoc "Pure accumulator for assembling streaming message deltas."
 
+  alias PiEx.Event.AgentEnd
   alias PiEx.Event.MessageUpdate
 
   defstruct text: "",
@@ -54,4 +55,10 @@ defmodule PiEx.Delta do
   end
 
   def apply_event(%__MODULE__{} = delta, %MessageUpdate{}), do: delta
+
+  def apply_event(%__MODULE__{} = delta, %AgentEnd{}) do
+    %{delta | done: true}
+  end
+
+  def apply_event(%__MODULE__{} = delta, _event), do: delta
 end

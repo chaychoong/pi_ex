@@ -58,13 +58,33 @@ defmodule PiEx.DeltaTest do
     assert Delta.text(delta) == "answer"
   end
 
-  test "tracks completion status" do
+  test "tracks completion via done message event" do
     delta = Delta.new()
     refute Delta.done?(delta)
 
     delta = Delta.apply_event(delta, %MessageUpdate{type: :done, reason: "stop"})
     assert Delta.done?(delta)
     assert Delta.stop_reason(delta) == "stop"
+  end
+
+  test "tracks completion via AgentEnd" do
+    delta =
+      Delta.new()
+      |> Delta.apply_event(%MessageUpdate{type: :text_delta, text: "hello"})
+      |> Delta.apply_event(%PiEx.Event.AgentEnd{messages: []})
+
+    assert Delta.done?(delta)
+    assert Delta.text(delta) == "hello"
+  end
+
+  test "ignores unrecognized events" do
+    delta =
+      Delta.new()
+      |> Delta.apply_event(%PiEx.Response{command: "prompt", success: true})
+      |> Delta.apply_event(%PiEx.Event.AgentStart{})
+
+    assert Delta.text(delta) == ""
+    refute Delta.done?(delta)
   end
 
   test "reset clears accumulated state" do

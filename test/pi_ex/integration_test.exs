@@ -1,6 +1,7 @@
 defmodule PiEx.IntegrationTest do
   use ExUnit.Case
 
+  alias PiEx.Event.AgentEnd
   alias PiEx.Event.MessageUpdate
 
   @moduletag :integration
@@ -17,7 +18,7 @@ defmodule PiEx.IntegrationTest do
     assert_receive {:pi_event, _, %MessageUpdate{type: :text_delta, text: "Hello from fake pi"}},
                    5000
 
-    assert_receive {:pi_event, _, %PiEx.Event.AgentEnd{}}, 5000
+    assert_receive {:pi_event, _, %AgentEnd{}}, 5000
 
     GenServer.stop(pid, :normal)
   end
@@ -46,7 +47,10 @@ defmodule PiEx.IntegrationTest do
     receive do
       {:pi_event, _, %MessageUpdate{} = event} ->
         delta = PiEx.Delta.apply_event(delta, event)
-        if event.type == :done, do: delta, else: collect_delta(delta)
+        collect_delta(delta)
+
+      {:pi_event, _, %AgentEnd{} = event} ->
+        PiEx.Delta.apply_event(delta, event)
 
       {:pi_event, _, _} ->
         collect_delta(delta)
