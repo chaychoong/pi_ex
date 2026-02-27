@@ -1,5 +1,20 @@
 defmodule PiEx.Instance do
-  @moduledoc "GenServer that owns a Port to a pi --mode rpc process."
+  @moduledoc """
+  GenServer that owns a Port to a `pi --mode rpc` process.
+
+  Events from Pi are delivered to the owner process (the caller of `start_link/1`)
+  as `{:pi_event, id, event}` messages, or via a custom `:broadcast` function.
+
+  ## Options
+
+    * `:pi_path` - path to the Pi executable (default: `"pi"`, resolved via PATH)
+    * `:args` - arguments passed to the executable (default: `["--mode", "rpc"]`)
+    * `:name` - registered name for the GenServer
+    * `:id` - identifier included in event tuples (defaults to `:name` or the port ref)
+    * `:owner` - PID to receive events (default: caller of `start_link/1`)
+    * `:broadcast` - `fn id, event -> ... end` called instead of sending to owner
+    * `:ui_timeout` - ms before auto-cancelling a UI request (default: `30_000`)
+  """
   use GenServer
 
   alias PiEx.Command.RespondUI
@@ -204,8 +219,6 @@ defmodule PiEx.Instance do
         {:noreply, state}
 
       {:error, _reason} ->
-        require Logger
-
         Logger.warning("PiEx.Instance failed to decode line: #{inspect(full_line)}")
         {:noreply, state}
     end
@@ -238,8 +251,6 @@ defmodule PiEx.Instance do
   end
 
   def handle_info(msg, state) do
-    require Logger
-
     Logger.warning("PiEx.Instance received unexpected message: #{inspect(msg)}")
     {:noreply, state}
   end

@@ -140,16 +140,16 @@ defmodule PiEx.Protocol do
   defp decode_parsed(%{"type" => "turn_end"}), do: {:event, %Event.TurnEnd{}}
 
   defp decode_parsed(%{"type" => "message_update"} = data) do
-    ame = data["assistantMessageEvent"] || %{}
+    msg_event = data["assistantMessageEvent"] || %{}
 
     # Pi uses "delta" for text content in text_delta/thinking_delta events,
     # and "text" for toolcall_start. Fall back to "text" for compatibility.
-    text = ame["delta"] || ame["text"]
+    text = msg_event["delta"] || msg_event["text"]
 
     event = %Event.MessageUpdate{
-      type: to_message_type(ame["type"] || "start"),
+      type: to_message_type(msg_event["type"] || "start"),
       text: text,
-      reason: ame["reason"]
+      reason: msg_event["reason"]
     }
 
     {:event, event}

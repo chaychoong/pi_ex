@@ -1,5 +1,5 @@
 defmodule PiEx.Response do
-  @moduledoc false
+  @moduledoc "Struct returned by correlated commands like `get_state/1` and `get_messages/1`."
   @enforce_keys [:command, :success]
   defstruct [:command, :success, :error, :data]
 
