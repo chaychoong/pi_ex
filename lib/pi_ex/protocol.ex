@@ -24,6 +24,15 @@ defmodule PiEx.Protocol do
   end
 
   def encode(%{__struct__: module} = cmd) do
+    case Module.split(module) do
+      ["PiEx", "Command" | _] ->
+        :ok
+
+      _ ->
+        raise ArgumentError,
+              "PiEx.Protocol.encode/1 only accepts PiEx.Command.* structs, got: #{inspect(module)}"
+    end
+
     command_name = command_name(module)
 
     cmd
