@@ -1,97 +1,43 @@
 defmodule PiEx.Protocol.EncodeTest do
   use ExUnit.Case, async: true
 
-  alias PiEx.Command
   alias PiEx.Protocol
+  alias PiEx.TestFixtures.CommandShapeMatrix
 
-  test "encodes Prompt with message and id" do
-    cmd = %Command.Prompt{message: "hello", id: "req-1"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
+  test "minimal command encodings match the shape matrix" do
+    for %{name: name, minimal: command, expected_minimal: expected, forbidden_keys: forbidden_keys} <-
+          CommandShapeMatrix.cases() do
+      decoded = command |> Protocol.encode() |> JSON.decode!()
 
-    assert decoded["type"] == "prompt"
-    assert decoded["message"] == "hello"
-    assert decoded["id"] == "req-1"
-    refute Map.has_key?(decoded, "images")
+      assert decoded == expected, "minimal encoding mismatch for #{name}: #{inspect(decoded)}"
+
+      for forbidden_key <- forbidden_keys do
+        refute Map.has_key?(decoded, forbidden_key),
+               "minimal encoding for #{name} leaked forbidden key #{forbidden_key}"
+      end
+    end
   end
 
-  test "encodes Prompt with images" do
-    cmd = %Command.Prompt{
-      message: "describe this",
-      id: "req-2",
-      images: [%{data: "base64data", mime_type: "image/png"}]
-    }
+  test "full command encodings match the shape matrix" do
+    for %{name: name, full: command, expected_full: expected, forbidden_keys: forbidden_keys} <-
+          CommandShapeMatrix.cases() do
+      decoded = command |> Protocol.encode() |> JSON.decode!()
 
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
+      assert decoded == expected, "full encoding mismatch for #{name}: #{inspect(decoded)}"
 
-    assert decoded["type"] == "prompt"
-    assert length(decoded["images"]) == 1
-    assert hd(decoded["images"])["mimeType"] == "image/png"
+      for forbidden_key <- forbidden_keys do
+        refute Map.has_key?(decoded, forbidden_key),
+               "full encoding for #{name} leaked forbidden key #{forbidden_key}"
+      end
+    end
   end
 
-  test "encodes SetModel with camelCase conversion" do
-    cmd = %Command.SetModel{provider: "anthropic", model_id: "claude-sonnet", id: "req-3"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
+  test "encodings never include nil values" do
+    for %{name: name, minimal: minimal, full: full} <- CommandShapeMatrix.cases(), command <- [minimal, full] do
+      decoded = command |> Protocol.encode() |> JSON.decode!()
 
-    assert decoded["type"] == "set_model"
-    assert decoded["provider"] == "anthropic"
-    assert decoded["modelId"] == "claude-sonnet"
-    refute Map.has_key?(decoded, "model_id")
-  end
-
-  test "encodes Abort with only command field" do
-    cmd = %Command.Abort{id: "req-4"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    assert decoded["type"] == "abort"
-    assert decoded["id"] == "req-4"
-    assert map_size(decoded) == 2
-  end
-
-  test "encodes Bash command" do
-    cmd = %Command.Bash{shell_command: "mix test", id: "req-5"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    assert decoded["type"] == "bash"
-    assert decoded["command"] == "mix test"
-  end
-
-  test "encodes Steer command" do
-    cmd = %Command.Steer{message: "focus on tests", id: "req-6"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    assert decoded["type"] == "steer"
-    assert decoded["message"] == "focus on tests"
-  end
-
-  test "encodes FollowUp command" do
-    cmd = %Command.FollowUp{message: "now run tests", id: "req-7"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    assert decoded["type"] == "follow_up"
-  end
-
-  test "encodes RespondUI as extension_ui_response" do
-    cmd = %Command.RespondUI{request_id: "ui-1", response: %{value: "yes"}, id: "req-8"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    assert decoded["type"] == "extension_ui_response"
-    assert decoded["id"] == "ui-1"
-    assert decoded["value"] == "yes"
-  end
-
-  test "omits nil fields from output" do
-    cmd = %Command.Prompt{message: "hello", id: "req-9"}
-    json = Protocol.encode(cmd)
-    decoded = JSON.decode!(json)
-
-    refute Map.has_key?(decoded, "images")
+      refute Enum.any?(decoded, fn {_key, value} -> is_nil(value) end),
+             "encoding for #{name} contains nil values: #{inspect(decoded)}"
+    end
   end
 end

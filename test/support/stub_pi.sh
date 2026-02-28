@@ -5,6 +5,9 @@
 while IFS= read -r line; do
   command=$(echo "$line" | jq -r '.type // ""')
   id=$(echo "$line" | jq -r '.id // ""')
+  shell_command=$(echo "$line" | jq -r '.command // ""')
+  provider=$(echo "$line" | jq -r '.provider // ""')
+  model_id=$(echo "$line" | jq -r '.modelId // ""')
 
   case "$command" in
     prompt)
@@ -21,6 +24,18 @@ while IFS= read -r line; do
       ;;
     get_state)
       echo "{\"type\":\"response\",\"command\":\"get_state\",\"success\":true,\"id\":\"$id\",\"data\":{\"isStreaming\":false}}"
+      ;;
+    get_messages)
+      echo "{\"type\":\"response\",\"command\":\"get_messages\",\"success\":true,\"id\":\"$id\",\"data\":{\"messages\":[{\"role\":\"assistant\",\"content\":\"Hello from contract history\"}]}}"
+      ;;
+    get_session_stats)
+      echo "{\"type\":\"response\",\"command\":\"get_session_stats\",\"success\":true,\"id\":\"$id\",\"data\":{\"totals\":{\"inputTokens\":120,\"outputTokens\":40},\"cost\":{\"usd\":0.12}}}"
+      ;;
+    bash)
+      echo "{\"type\":\"response\",\"command\":\"bash\",\"success\":true,\"id\":\"$id\",\"data\":{\"stdout\":\"hello\",\"stderr\":\"\",\"exitCode\":0,\"receivedCommand\":\"$shell_command\"}}"
+      ;;
+    set_model)
+      echo "{\"type\":\"response\",\"command\":\"set_model\",\"success\":true,\"id\":\"$id\",\"data\":{\"provider\":\"$provider\",\"modelId\":\"$model_id\",\"applied\":true}}"
       ;;
     *)
       echo "{\"type\":\"response\",\"command\":\"$command\",\"success\":true,\"id\":\"$id\",\"data\":{}}"

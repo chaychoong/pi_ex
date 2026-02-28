@@ -26,6 +26,23 @@ defmodule PiEx.IntegrationTest do
     assert data["isStreaming"] == false
   end
 
+  test "get_messages returns a response envelope with messages list", %{pid: pid} do
+    assert {:ok, %PiEx.Response{command: "get_messages", success: true, error: nil, data: data}} =
+             PiEx.get_messages(pid)
+
+    assert is_map(data)
+    assert is_list(data["messages"])
+  end
+
+  test "get_session_stats returns a response envelope with token totals", %{pid: pid} do
+    assert {:ok, %PiEx.Response{command: "get_session_stats", success: true, error: nil, data: data}} =
+             PiEx.get_session_stats(pid)
+
+    assert is_map(data)
+    assert is_map(data["tokens"])
+    assert is_number(data["tokens"]["total"])
+    assert is_binary(data["sessionId"])
+  end
   test "prompt stream reaches agent_end and returns requested token", %{pid: pid} do
     token = "PI_COMPAT_OK_#{System.unique_integer([:positive])}"
 
