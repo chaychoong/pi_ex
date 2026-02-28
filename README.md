@@ -17,6 +17,15 @@ def deps do
 end
 ```
 
+## Pi compatibility
+
+`pi_ex` follows a **best-effort-latest** compatibility policy for the `pi` CLI.
+
+- Last tracked `pi` version: `0.55.3`
+- Last updated: `2026-02-28`
+
+When validating against a newer `pi` release, update this section in the same change.
+
 ## Quick start
 
 ```elixir
