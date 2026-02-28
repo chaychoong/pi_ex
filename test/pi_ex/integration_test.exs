@@ -2,60 +2,66 @@ defmodule PiEx.IntegrationTest do
   use ExUnit.Case
 
   alias PiEx.Event.AgentEnd
-  alias PiEx.Event.MessageUpdate
 
   @moduletag :integration
+  setup do
+    cond do
+      is_nil(System.find_executable("pi")) ->
+        {:skip, "pi executable is not available on PATH"}
 
-  @fake_pi Path.expand("../support/fake_pi.sh", __DIR__)
+      true ->
+        {:ok, pid} = PiEx.Instance.start_link([])
 
-  test "full prompt lifecycle" do
-    {:ok, pid} = PiEx.Instance.start_link(pi_path: @fake_pi)
+        on_exit(fn ->
+          if Process.alive?(pid), do: GenServer.stop(pid, :normal)
+        end)
 
-    PiEx.prompt(pid, "hello")
-
-    assert_receive {:pi_event, _, %PiEx.Event.AgentStart{}}, 5000
-
-    assert_receive {:pi_event, _, %MessageUpdate{type: :text_delta, text: "Hello from fake pi"}},
-                   5000
-
-    assert_receive {:pi_event, _, %AgentEnd{}}, 5000
-
-    GenServer.stop(pid, :normal)
+        {:ok, pid: pid}
+    end
   end
 
-  test "get_state returns response" do
-    {:ok, pid} = PiEx.Instance.start_link(pi_path: @fake_pi)
+  test "get_state succeeds against a live pi instance", %{pid: pid} do
+    assert {:ok, %PiEx.Response{success: true, data: data}} = PiEx.get_state(pid)
+    assert is_map(data)
+    assert data["isStreaming"] == false
+  end
+
+  test "prompt stream reaches agent_end and returns requested token", %{pid: pid} do
+    token = "PI_COMPAT_OK_#{System.unique_integer([:positive])}"
+
+    prompt =
+      "Reply with exactly #{token}. No punctuation, no markdown, no extra words, and no explanation."
+
+    assert :ok = PiEx.prompt(pid, prompt)
+
+    deadline_ms = System.monotonic_time(:millisecond) + 30_000
+    delta = collect_until_agent_end(PiEx.Delta.new(), deadline_ms)
+
+    assert PiEx.Delta.done?(delta)
+    assert PiEx.Delta.text(delta) =~ token
 
     assert {:ok, %PiEx.Response{success: true, data: data}} = PiEx.get_state(pid)
     assert data["isStreaming"] == false
-
-    GenServer.stop(pid, :normal)
   end
 
-  test "delta accumulation over full stream" do
-    {:ok, pid} = PiEx.Instance.start_link(pi_path: @fake_pi)
-    PiEx.prompt(pid, "hello")
+  defp collect_until_agent_end(delta, deadline_ms) do
+    remaining_ms = deadline_ms - System.monotonic_time(:millisecond)
 
-    delta = collect_delta(PiEx.Delta.new())
-    assert PiEx.Delta.text(delta) == "Hello from fake pi"
-    assert PiEx.Delta.done?(delta)
+    if remaining_ms <= 0 do
+      flunk("timed out waiting for AgentEnd event from pi")
+    end
 
-    GenServer.stop(pid, :normal)
-  end
-
-  defp collect_delta(delta) do
     receive do
-      {:pi_event, _, %MessageUpdate{} = event} ->
-        delta = PiEx.Delta.apply_event(delta, event)
-        collect_delta(delta)
+      {:pi_event, _, event} ->
+        updated = PiEx.Delta.apply_event(delta, event)
 
-      {:pi_event, _, %AgentEnd{} = event} ->
-        PiEx.Delta.apply_event(delta, event)
-
-      {:pi_event, _, _} ->
-        collect_delta(delta)
+        case event do
+          %AgentEnd{} -> updated
+          _ -> collect_until_agent_end(updated, deadline_ms)
+        end
     after
-      5000 -> delta
+      remaining_ms ->
+        flunk("timed out waiting for AgentEnd event from pi")
     end
   end
 end

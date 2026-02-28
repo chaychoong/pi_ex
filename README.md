@@ -26,6 +26,17 @@ end
 
 When validating against a newer `pi` release, update this section in the same change.
 
+## Test suites
+
+- **Contract tests** (`test/pi_ex/contract_test.exs`) use a deterministic Pi RPC test double and run in normal `mix test`.
+- **Integration tests** (`test/pi_ex/integration_test.exs`) run against a live `pi` binary and are excluded by default (`test/test_helper.exs`).
+
+Run live integration tests explicitly:
+
+```bash
+mix test --include integration test/pi_ex/integration_test.exs
+```
+
 ## Quick start
 
 ```elixir
